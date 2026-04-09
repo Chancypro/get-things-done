@@ -1,0 +1,88 @@
+{
+  "standaloneActions": [
+    {
+      "id": "4ca31334-2175-4390-b496-e238c0a64b98",
+      "title": "买一个移动硬盘",
+      "completed": false,
+      "module": "next",
+      "createdAt": "2026-04-08T20:25:15.171Z",
+      "updatedAt": "2026-04-08T21:34:47.077Z",
+      "order": 1
+    },
+    {
+      "id": "13f909ee-8ca1-4c52-95b1-654e196ea098",
+      "title": "测试2",
+      "completed": false,
+      "module": "next",
+      "order": 0,
+      "createdAt": "2026-04-08T21:06:09.418Z",
+      "updatedAt": "2026-04-08T21:34:45.487Z"
+    },
+    {
+      "id": "16a267e2-c241-4f55-a2e1-b5141ab3e5b0",
+      "title": "3333",
+      "completed": false,
+      "module": "someday",
+      "order": 0,
+      "createdAt": "2026-04-08T21:07:07.150Z",
+      "updatedAt": "2026-04-08T21:08:37.046Z"
+    }
+  ],
+  "projects": [
+    {
+      "id": "7bedf765-53a0-4ee0-af28-5f8a5e429c70",
+      "title": "做一件事情aff",
+      "status": "active",
+      "order": 0,
+      "createdAt": "2026-04-08T21:33:04.924Z",
+      "updatedAt": "2026-04-08T21:59:12.621Z",
+      "actions": [
+        {
+          "id": "a1cefd99-172e-4702-9b53-121394459d51",
+          "title": "项目动作a",
+          "completed": false,
+          "order": 0,
+          "syncTargets": {
+            "next": true,
+            "someday": true,
+            "waiting": false
+          },
+          "createdAt": "2026-04-08T21:33:30.381Z",
+          "updatedAt": "2026-04-08T21:35:50.341Z"
+        },
+        {
+          "id": "8a43da52-924e-4c13-b94d-ffffe3f6da7a",
+          "title": "项目动作bbbdd",
+          "completed": false,
+          "order": 1,
+          "syncTargets": {
+            "next": true,
+            "someday": false,
+            "waiting": true
+          },
+          "createdAt": "2026-04-08T21:33:46.370Z",
+          "updatedAt": "2026-04-08T21:35:50.341Z"
+        }
+      ]
+    },
+    {
+      "id": "8082005c-d2af-4802-9d16-1de495a278a3",
+      "title": "项目b",
+      "status": "active",
+      "order": 1,
+      "createdAt": "2026-04-08T21:59:06.579Z",
+      "updatedAt": "2026-04-08T21:59:12.621Z",
+      "actions": []
+    }
+  ],
+  "calendarItems": [
+    {
+      "id": "cfe1f758-3154-4fd3-a8ae-ff5b31a0b3f8",
+      "date": "2026-04-15",
+      "title": "毕设第二次查重截止时间2",
+      "completed": false,
+      "createdAt": "2026-04-08T21:56:51.992Z",
+      "updatedAt": "2026-04-08T21:57:15.059Z"
+    }
+  ]
+}
