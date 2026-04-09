@@ -102,6 +102,26 @@
   margin-top: 0;
 }
 
+.debug-toggle-card {
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #374151;
+}
+
+.checkbox-label input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
 .debug-card pre {
   margin: 0;
   white-space: pre-wrap;

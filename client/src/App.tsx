@@ -50,6 +50,7 @@ function App() {
   const [editingCalendarItemId, setEditingCalendarItemId] = useState<string | null>(null)
   const [editingCalendarItemTitle, setEditingCalendarItemTitle] = useState('')
   const [editingCalendarItemDate, setEditingCalendarItemDate] = useState(getTodayString())
+  const [showDebugPanel, setShowDebugPanel] = useState(true)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -655,10 +656,21 @@ function App() {
             />
           )}
 
-          <div className="panel-card debug-card">
+          <div className="panel-card debug-toggle-card">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={showDebugPanel}
+                onChange={(event) => setShowDebugPanel(event.target.checked)}
+              />
+              <span>{'\u663e\u793a\u8c03\u8bd5\u6570\u636e\u533a'}</span>
+            </label>
+          </div>
+
+          {showDebugPanel && <div className="panel-card debug-card">
             <h3>调试数据区</h3>
             <pre>{JSON.stringify(data, null, 2)}</pre>
-          </div>
+          </div>}
         </section>
       </main>
     </div>
