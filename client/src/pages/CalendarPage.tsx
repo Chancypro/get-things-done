@@ -32,6 +32,14 @@ function renderEventContent(arg: EventContentArg) {
   )
 }
 
+function getTodayString() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export function CalendarPage({
   selectedDate,
   calendarItems,
@@ -50,6 +58,8 @@ export function CalendarPage({
   onToggleCalendarItem,
   onDeleteCalendarItem,
 }: Props) {
+  const today = getTodayString()
+
   const itemsForSelectedDate = useMemo(() => {
     return calendarItems.filter((item) => item.date === selectedDate)
   }, [calendarItems, selectedDate])
@@ -70,7 +80,7 @@ export function CalendarPage({
             <h2>日历</h2>
             <p>点击某一天，在右侧添加、编辑、删除和勾选该日期的事项。</p>
           </div>
-          <div className="calendar-selected-date">当前日期：{selectedDate}</div>
+          <div className="calendar-selected-date">当前日期：{today}</div>
         </div>
 
         <FullCalendar

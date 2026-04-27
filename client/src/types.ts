@@ -23,6 +23,7 @@ export type StandaloneAction = {
   id: string
   title: string
   completed: boolean
+  starred: boolean
   module: StandaloneModule
   order: number
   createdAt: string
@@ -33,6 +34,7 @@ export type ProjectAction = {
   id: string
   title: string
   completed: boolean
+  starred: boolean
   order: number
   syncTargets: {
     next: boolean
@@ -48,6 +50,7 @@ export type Project = {
   title: string
   status: ProjectStatus
   order: number
+  colorIndex: number
   createdAt: string
   updatedAt: string
   actions: ProjectAction[]

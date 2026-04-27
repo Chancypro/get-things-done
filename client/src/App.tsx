@@ -3,7 +3,7 @@ import { useSensor, useSensors, PointerSensor, type DragEndEvent } from '@dnd-ki
 import './App.css'
 import { api } from './lib/api'
 import { CalendarPage } from './pages/CalendarPage'
-import { ProjectsPage } from './pages/ProjectsPage'
+import { ProjectsPage, TrashProjectsSection } from './pages/ProjectsPage'
 import { StandaloneModulePage } from './pages/StandaloneModulePage'
 import {
   MODULES,
@@ -24,6 +24,36 @@ function getTodayString() {
   const month = String(now.getMonth() + 1).padStart(2, '0')
   const day = String(now.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
+}
+
+function compareByOrder<T extends { order: number }>(a: T, b: T) {
+  return a.order - b.order
+}
+
+function sortActionsForDisplay<T extends { completed: boolean; order: number }>(actions: T[]) {
+  return [...actions].sort((a, b) => {
+    if (a.completed !== b.completed) {
+      return a.completed ? 1 : -1
+    }
+    return a.order - b.order
+  })
+}
+
+function reorderGroup<T extends { id: string }>(groupActions: T[], event: DragEndEvent) {
+  const { active, over } = event
+  if (!over || active.id === over.id) return null
+
+  const activeId = String(active.id)
+  const overId = String(over.id)
+  const oldIndex = groupActions.findIndex((item) => item.id === activeId)
+  const newIndex = groupActions.findIndex((item) => item.id === overId)
+  if (oldIndex === -1 || newIndex === -1) return null
+
+  const reordered = [...groupActions]
+  const [moved] = reordered.splice(oldIndex, 1)
+  reordered.splice(newIndex, 0, moved)
+
+  return reordered
 }
 
 function App() {
@@ -50,7 +80,16 @@ function App() {
   const [editingCalendarItemId, setEditingCalendarItemId] = useState<string | null>(null)
   const [editingCalendarItemTitle, setEditingCalendarItemTitle] = useState('')
   const [editingCalendarItemDate, setEditingCalendarItemDate] = useState(getTodayString())
-  const [showDebugPanel, setShowDebugPanel] = useState(true)
+  const [showDebugPanel, setShowDebugPanel] = useState(false)
+  const [expandedStandaloneCompleted, setExpandedStandaloneCompleted] = useState<
+    Partial<Record<StandaloneModule, boolean>>
+  >({})
+  const [expandedSyncedCompleted, setExpandedSyncedCompleted] = useState<
+    Partial<Record<SyncTarget, boolean>>
+  >({})
+  const [expandedProjectCompleted, setExpandedProjectCompleted] = useState<
+    Record<string, boolean>
+  >({})
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -81,15 +120,19 @@ function App() {
   }
 
   function getStandaloneActionsByModule(moduleKey: StandaloneModule) {
-    return (data?.standaloneActions ?? [])
-      .filter((item) => item.module === moduleKey)
-      .sort((a, b) => a.order - b.order)
+    return sortActionsForDisplay(
+      (data?.standaloneActions ?? []).filter((item) => item.module === moduleKey)
+    )
   }
 
   function getProjectsByStatus(status: ProjectStatus) {
     return (data?.projects ?? [])
       .filter((project) => project.status === status)
       .sort((a, b) => a.order - b.order)
+      .map((project) => ({
+        ...project,
+        actions: sortActionsForDisplay(project.actions),
+      }))
   }
 
   function getProjectActionEditKey(projectId: string, actionId: string) {
@@ -98,15 +141,36 @@ function App() {
 
   function getSyncedProjectActions(target: SyncTarget) {
     return getProjectsByStatus('active').flatMap((project) =>
-      [...project.actions]
-        .sort((a, b) => a.order - b.order)
+      sortActionsForDisplay(project.actions)
         .filter((action) => action.syncTargets[target])
         .map((action) => ({
           projectId: project.id,
           projectTitle: project.title,
+          projectColorIndex: project.colorIndex,
           action,
         }))
     )
+  }
+
+  function toggleStandaloneCompleted(moduleKey: StandaloneModule) {
+    setExpandedStandaloneCompleted((prev) => ({
+      ...prev,
+      [moduleKey]: !prev[moduleKey],
+    }))
+  }
+
+  function toggleSyncedCompleted(target: SyncTarget) {
+    setExpandedSyncedCompleted((prev) => ({
+      ...prev,
+      [target]: !prev[target],
+    }))
+  }
+
+  function toggleProjectCompleted(projectId: string) {
+    setExpandedProjectCompleted((prev) => ({
+      ...prev,
+      [projectId]: !prev[projectId],
+    }))
   }
 
   async function handleAddInboxAction() {
@@ -133,6 +197,16 @@ function App() {
     } catch (err) {
       console.error(err)
       alert('更新动作失败，请查看控制台报错。')
+    }
+  }
+
+  async function handleToggleStandaloneActionStar(action: StandaloneAction) {
+    try {
+      await api.updateStandaloneAction(action.id, { starred: !action.starred })
+      await refreshData(false)
+    } catch (err) {
+      console.error(err)
+      alert('更新重点标记失败，请查看控制台报错。')
     }
   }
 
@@ -200,19 +274,21 @@ function App() {
     }
   }
 
-  async function handleStandaloneDragEnd(moduleKey: StandaloneModule, event: DragEndEvent) {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
+  async function handleStandaloneDragEnd(
+    moduleKey: StandaloneModule,
+    groupActions: StandaloneAction[],
+    event: DragEndEvent
+  ) {
+    const reorderedGroup = reorderGroup(groupActions, event)
+    if (!reorderedGroup) return
 
-    const items = getStandaloneActionsByModule(moduleKey)
-    const oldIndex = items.findIndex((item) => item.id === active.id)
-    const newIndex = items.findIndex((item) => item.id === over.id)
-    if (oldIndex === -1 || newIndex === -1) return
-
-    const reordered = [...items]
-    const [moved] = reordered.splice(oldIndex, 1)
-    reordered.splice(newIndex, 0, moved)
-    const orderedIds = reordered.map((item) => item.id)
+    const allActions = getStandaloneActionsByModule(moduleKey)
+    const incompleteActions = allActions.filter((action) => !action.completed).sort(compareByOrder)
+    const completedActions = allActions.filter((action) => action.completed).sort(compareByOrder)
+    const isCompletedGroup = groupActions[0]?.completed ?? false
+    const orderedIds = isCompletedGroup
+      ? [...incompleteActions, ...reorderedGroup].map((item) => item.id)
+      : [...reorderedGroup, ...completedActions].map((item) => item.id)
 
     try {
       await api.reorderStandaloneActions({ module: moduleKey, orderedIds })
@@ -362,6 +438,18 @@ function App() {
     }
   }
 
+  async function toggleProjectActionStar(projectId: string, action: ProjectAction) {
+    try {
+      await api.updateProjectAction(projectId, action.id, {
+        starred: !action.starred,
+      })
+      await refreshData(false)
+    } catch (err) {
+      console.error(err)
+      alert('更新重点标记失败，请查看控制台报错。')
+    }
+  }
+
   async function toggleProjectActionSyncTarget(
     projectId: string,
     action: ProjectAction,
@@ -399,22 +487,27 @@ function App() {
     }
   }
 
-  async function handleProjectActionDragEnd(projectId: string, event: DragEndEvent) {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
+  async function handleProjectActionDragEnd(
+    projectId: string,
+    groupActions: ProjectAction[],
+    event: DragEndEvent
+  ) {
+    const reorderedGroup = reorderGroup(groupActions, event)
+    if (!reorderedGroup) return
 
-    const project = getProjectsByStatus('active').find((item) => item.id === projectId)
+    const project = (data?.projects ?? []).find((item) => item.id === projectId)
     if (!project) return
 
-    const actions = [...project.actions].sort((a, b) => a.order - b.order)
-    const oldIndex = actions.findIndex((item) => item.id === active.id)
-    const newIndex = actions.findIndex((item) => item.id === over.id)
-    if (oldIndex === -1 || newIndex === -1) return
-
-    const reordered = [...actions]
-    const [moved] = reordered.splice(oldIndex, 1)
-    reordered.splice(newIndex, 0, moved)
-    const orderedIds = reordered.map((item) => item.id)
+    const incompleteActions = project.actions
+      .filter((action) => !action.completed)
+      .sort(compareByOrder)
+    const completedActions = project.actions
+      .filter((action) => action.completed)
+      .sort(compareByOrder)
+    const isCompletedGroup = groupActions[0]?.completed ?? false
+    const orderedIds = isCompletedGroup
+      ? [...incompleteActions, ...reorderedGroup].map((item) => item.id)
+      : [...reorderedGroup, ...completedActions].map((item) => item.id)
 
     try {
       await api.reorderProjectActions(projectId, orderedIds)
@@ -583,7 +676,54 @@ function App() {
               editingStandaloneTitle={editingStandaloneTitle}
               editingProjectActionKey={editingProjectActionKey}
               editingProjectActionTitle={editingProjectActionTitle}
-              showTrashProjectsSection={undefined}
+              completedActionsExpanded={
+                expandedStandaloneCompleted[activeModule as StandaloneModule] ?? false
+              }
+              syncedCompletedActionsExpanded={
+                activeModule === 'next' || activeModule === 'someday' || activeModule === 'waiting'
+                  ? (expandedSyncedCompleted[activeModule] ?? false)
+                  : false
+              }
+              showTrashProjectsSection={
+                activeModule === 'trash' ? (
+                  <TrashProjectsSection
+                    trashProjects={getProjectsByStatus('trash')}
+                    editingProjectId={editingProjectId}
+                    editingProjectTitle={editingProjectTitle}
+                    editingProjectActionKey={editingProjectActionKey}
+                    editingProjectActionTitle={editingProjectActionTitle}
+                    expandedCompletedProjectIds={expandedProjectCompleted}
+                    getProjectActionEditKey={getProjectActionEditKey}
+                    onStartEditProject={startEditProject}
+                    onChangeEditProjectTitle={setEditingProjectTitle}
+                    onSaveEditProject={saveEditProject}
+                    onCancelEditProject={cancelEditProject}
+                    onToggleProjectStatus={handleProjectStatusChange}
+                    onDeleteProject={handleDeleteProject}
+                    onToggleCompletedProjectActions={toggleProjectCompleted}
+                    onStartEditProjectAction={startEditProjectAction}
+                    onChangeEditProjectActionTitle={setEditingProjectActionTitle}
+                    onSaveEditProjectAction={saveEditProjectAction}
+                    onCancelEditProjectAction={cancelEditProjectAction}
+                    onToggleProjectAction={toggleProjectAction}
+                    onToggleProjectActionStar={toggleProjectActionStar}
+                    onDeleteProjectAction={handleDeleteProjectAction}
+                    onToggleProjectActionSyncTarget={toggleProjectActionSyncTarget}
+                  />
+                ) : undefined
+              }
+              onToggleCompletedActionsExpanded={() =>
+                toggleStandaloneCompleted(activeModule as StandaloneModule)
+              }
+              onToggleSyncedCompletedActionsExpanded={() => {
+                if (
+                  activeModule === 'next' ||
+                  activeModule === 'someday' ||
+                  activeModule === 'waiting'
+                ) {
+                  toggleSyncedCompleted(activeModule)
+                }
+              }}
               onChangeNewInboxTitle={setNewInboxTitle}
               onAddInboxAction={handleAddInboxAction}
               onStandaloneDragEnd={handleStandaloneDragEnd}
@@ -592,6 +732,7 @@ function App() {
               onSaveEditStandaloneAction={saveEditStandaloneAction}
               onCancelEditStandaloneAction={cancelEditStandaloneAction}
               onToggleStandaloneAction={handleToggleStandaloneAction}
+              onToggleStandaloneActionStar={handleToggleStandaloneActionStar}
               onMoveStandaloneAction={handleMoveStandaloneAction}
               onDeleteStandaloneAction={handleDeleteStandaloneAction}
               onConvertActionToProject={handleConvertActionToProject}
@@ -600,6 +741,7 @@ function App() {
               onSaveEditProjectAction={saveEditProjectAction}
               onCancelEditProjectAction={cancelEditProjectAction}
               onToggleProjectAction={toggleProjectAction}
+              onToggleProjectActionStar={toggleProjectActionStar}
               getProjectActionEditKey={getProjectActionEditKey}
             />
           )}
@@ -607,13 +749,13 @@ function App() {
           {activeModule === 'projects' && (
             <ProjectsPage
               activeProjects={getProjectsByStatus('active')}
-              trashProjects={getProjectsByStatus('trash')}
               sensors={sensors}
               editingProjectId={editingProjectId}
               editingProjectTitle={editingProjectTitle}
               editingProjectActionKey={editingProjectActionKey}
               editingProjectActionTitle={editingProjectActionTitle}
               newProjectActionTitles={newProjectActionTitles}
+              expandedCompletedProjectIds={expandedProjectCompleted}
               getProjectActionEditKey={getProjectActionEditKey}
               onProjectDragEnd={handleProjectDragEnd}
               onStartEditProject={startEditProject}
@@ -625,11 +767,13 @@ function App() {
               onChangeNewProjectActionTitle={updateNewProjectActionTitle}
               onAddProjectAction={handleAddProjectAction}
               onProjectActionDragEnd={handleProjectActionDragEnd}
+              onToggleCompletedProjectActions={toggleProjectCompleted}
               onStartEditProjectAction={startEditProjectAction}
               onChangeEditProjectActionTitle={setEditingProjectActionTitle}
               onSaveEditProjectAction={saveEditProjectAction}
               onCancelEditProjectAction={cancelEditProjectAction}
               onToggleProjectAction={toggleProjectAction}
+              onToggleProjectActionStar={toggleProjectActionStar}
               onDeleteProjectAction={handleDeleteProjectAction}
               onToggleProjectActionSyncTarget={toggleProjectActionSyncTarget}
             />

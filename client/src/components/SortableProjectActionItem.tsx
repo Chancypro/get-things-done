@@ -5,6 +5,7 @@ import { ProjectActionRow } from './ProjectActionRow'
 
 type Props = {
   action: ProjectAction
+  projectColorIndex: number
   isEditing: boolean
   editingTitle: string
   onStartEdit: () => void
@@ -12,6 +13,7 @@ type Props = {
   onSaveEdit: () => void
   onCancelEdit: () => void
   onToggle: () => void
+  onToggleStar: () => void
   onDelete: () => void
   onToggleSync: (target: SyncTarget) => void
 }
@@ -29,6 +31,7 @@ export function SortableProjectActionItem(props: Props) {
     <div ref={setNodeRef} style={style} className={isDragging ? 'dragging-wrapper' : ''}>
       <ProjectActionRow
         action={props.action}
+        projectColorIndex={props.projectColorIndex}
         isEditing={props.isEditing}
         editingTitle={props.editingTitle}
         showSyncControls={true}
@@ -38,6 +41,7 @@ export function SortableProjectActionItem(props: Props) {
         onSaveEdit={props.onSaveEdit}
         onCancelEdit={props.onCancelEdit}
         onToggle={props.onToggle}
+        onToggleStar={props.onToggleStar}
         onDelete={props.onDelete}
         onToggleSync={props.onToggleSync}
         dragHandle={

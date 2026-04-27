@@ -8,6 +8,7 @@ const port = 3000
 
 const ACTION_MODULES = ['inbox', 'next', 'someday', 'waiting', 'reference', 'trash']
 const PROJECT_STATUSES = ['active', 'trash']
+const PROJECT_COLOR_COUNT = 8
 
 const defaultData = {
   standaloneActions: [],
@@ -32,18 +33,23 @@ function normalizeDb() {
 
     actions.forEach((action, index) => {
       if (typeof action.order !== 'number') action.order = index
+      normalizeActionFields(action)
     })
   }
 
   db.data.projects.forEach((project, projectIndex) => {
     if (!PROJECT_STATUSES.includes(project.status)) project.status = 'active'
     if (typeof project.order !== 'number') project.order = projectIndex
+    if (typeof project.colorIndex !== 'number') {
+      project.colorIndex = projectIndex % PROJECT_COLOR_COUNT
+    }
     if (!Array.isArray(project.actions)) project.actions = []
 
     project.actions
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
       .forEach((action, index) => {
         if (typeof action.order !== 'number') action.order = index
+        normalizeActionFields(action)
         if (!action.syncTargets) {
           action.syncTargets = {
             next: false,
@@ -51,9 +57,6 @@ function normalizeDb() {
             waiting: false,
           }
         }
-        if (typeof action.completed !== 'boolean') action.completed = false
-        if (!action.createdAt) action.createdAt = new Date().toISOString()
-        if (!action.updatedAt) action.updatedAt = new Date().toISOString()
       })
   })
 
@@ -62,6 +65,21 @@ function normalizeDb() {
     if (!item.createdAt) item.createdAt = new Date().toISOString()
     if (!item.updatedAt) item.updatedAt = new Date().toISOString()
   })
+}
+
+function normalizeActionFields(action) {
+  if (typeof action.completed !== 'boolean') action.completed = false
+  if (typeof action.starred !== 'boolean') action.starred = false
+  if (!action.createdAt) action.createdAt = new Date().toISOString()
+  if (!action.updatedAt) action.updatedAt = new Date().toISOString()
+
+  if (typeof action.title === 'string' && /^\s*⭐/.test(action.title)) {
+    const cleanedTitle = action.title.replace(/^\s*(?:⭐\s*)+/, '').trim()
+    if (cleanedTitle) {
+      action.title = cleanedTitle
+    }
+    action.starred = true
+  }
 }
 
 function getModuleActions(moduleKey) {
@@ -74,6 +92,12 @@ function reindexModule(moduleKey) {
   const actions = getModuleActions(moduleKey)
   actions.forEach((action, index) => {
     action.order = index
+  })
+}
+
+function makeRoomAtTopOfModule(moduleKey) {
+  getModuleActions(moduleKey).forEach((action) => {
+    action.order = (action.order ?? 0) + 1
   })
 }
 
@@ -107,6 +131,16 @@ function reindexProjectActions(project) {
   actions.forEach((action, index) => {
     action.order = index
   })
+}
+
+function makeRoomAtTopOfProject(project) {
+  sortProjectActions(project).forEach((action) => {
+    action.order = (action.order ?? 0) + 1
+  })
+}
+
+function getNextProjectColorIndex() {
+  return db.data.projects.length % PROJECT_COLOR_COUNT
 }
 
 function sortCalendarItems(items) {
@@ -165,14 +199,15 @@ app.post('/api/actions', async (req, res) => {
   }
 
   const targetModule = ACTION_MODULES.includes(module) ? module : 'inbox'
-  const newOrder = getModuleActions(targetModule).length
+  makeRoomAtTopOfModule(targetModule)
 
   const newAction = {
     id: uuidv4(),
     title: title.trim(),
     completed: false,
+    starred: false,
     module: targetModule,
-    order: newOrder,
+    order: 0,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }
@@ -185,7 +220,7 @@ app.post('/api/actions', async (req, res) => {
 
 app.patch('/api/actions/:id', async (req, res) => {
   const { id } = req.params
-  const { title, completed, module } = req.body
+  const { title, completed, module, starred } = req.body
 
   const action = db.data.standaloneActions.find((item) => item.id === id)
 
@@ -205,12 +240,16 @@ app.patch('/api/actions/:id', async (req, res) => {
     action.completed = completed
   }
 
+  if (typeof starred === 'boolean') {
+    action.starred = starred
+  }
+
   if (typeof module === 'string' && ACTION_MODULES.includes(module) && module !== action.module) {
     const previousModule = action.module
-    const newOrder = getModuleActions(module).length
 
+    makeRoomAtTopOfModule(module)
     action.module = module
-    action.order = newOrder
+    action.order = 0
     reindexModule(previousModule)
     reindexModule(module)
   }
@@ -297,6 +336,7 @@ app.post('/api/projects/from-action', async (req, res) => {
     title: sourceAction.title,
     status: 'active',
     order: getProjectsByStatus('active').length,
+    colorIndex: getNextProjectColorIndex(),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     actions: [],
@@ -412,11 +452,14 @@ app.post('/api/projects/:projectId/actions', async (req, res) => {
     return res.status(400).json({ error: '动作标题不能为空' })
   }
 
+  makeRoomAtTopOfProject(project)
+
   const newAction = {
     id: uuidv4(),
     title: title.trim(),
     completed: false,
-    order: sortProjectActions(project).length,
+    starred: false,
+    order: 0,
     syncTargets: {
       next: false,
       someday: false,
@@ -473,7 +516,7 @@ app.post('/api/projects/:projectId/actions/reorder', async (req, res) => {
 
 app.patch('/api/projects/:projectId/actions/:actionId', async (req, res) => {
   const { projectId, actionId } = req.params
-  const { title, completed, syncTargets } = req.body
+  const { title, completed, syncTargets, starred } = req.body
 
   const project = getProjectById(projectId)
   if (!project) {
@@ -495,6 +538,10 @@ app.patch('/api/projects/:projectId/actions/:actionId', async (req, res) => {
 
   if (typeof completed === 'boolean') {
     action.completed = completed
+  }
+
+  if (typeof starred === 'boolean') {
+    action.starred = starred
   }
 
   if (syncTargets && typeof syncTargets === 'object') {

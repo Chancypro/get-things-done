@@ -7,6 +7,7 @@ type Props = {
   isEditing: boolean
   editingTitle: string
   sourceProjectTitle?: string
+  projectColorIndex: number
   showSyncControls: boolean
   showDelete: boolean
   onStartEdit: () => void
@@ -14,6 +15,7 @@ type Props = {
   onSaveEdit: () => void
   onCancelEdit: () => void
   onToggle: () => void
+  onToggleStar: () => void
   onDelete?: () => void
   onToggleSync?: (target: SyncTarget) => void
 }
@@ -24,6 +26,7 @@ export function ProjectActionRow({
   isEditing,
   editingTitle,
   sourceProjectTitle,
+  projectColorIndex,
   showSyncControls,
   showDelete,
   onStartEdit,
@@ -31,15 +34,29 @@ export function ProjectActionRow({
   onSaveEdit,
   onCancelEdit,
   onToggle,
+  onToggleStar,
   onDelete,
   onToggleSync,
 }: Props) {
   return (
-    <div className="project-action-row">
+    <div
+      className={`project-action-row project-color-${projectColorIndex % 8} ${
+        action.starred ? 'starred-action' : ''
+      }`}
+    >
       <div className="project-action-top">
         <div className="project-action-left">
           {dragHandle}
           <input type="checkbox" checked={action.completed} onChange={onToggle} />
+          <button
+            type="button"
+            className={`star-button ${action.starred ? 'active' : ''}`}
+            title={action.starred ? '取消重点标记' : '标记为重点动作'}
+            aria-label={action.starred ? '取消重点标记' : '标记为重点动作'}
+            onClick={onToggleStar}
+          >
+            {action.starred ? '★' : '☆'}
+          </button>
           <div className="project-action-texts">
             {sourceProjectTitle && <div className="source-tag">来自项目：{sourceProjectTitle}</div>}
 

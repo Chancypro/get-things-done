@@ -41,7 +41,7 @@ export function ProjectCardContent({
   children,
 }: ProjectCardContentProps) {
   return (
-    <div className="project-card">
+    <div className={`project-card project-color-${project.colorIndex % 8}`}>
       <div className="project-header">
         <div className="project-title-row">
           {dragHandle}

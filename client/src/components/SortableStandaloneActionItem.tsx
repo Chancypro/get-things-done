@@ -13,6 +13,7 @@ type Props = {
   onSaveEdit: (actionId: string) => void
   onCancelEdit: () => void
   onToggle: (action: StandaloneAction) => void
+  onToggleStar: (action: StandaloneAction) => void
   onMove: (actionId: string, targetModule: StandaloneModule) => void
   onDelete: (action: StandaloneAction) => void
   onConvertToProject: (action: StandaloneAction) => void
@@ -28,6 +29,7 @@ export function SortableStandaloneActionItem({
   onSaveEdit,
   onCancelEdit,
   onToggle,
+  onToggleStar,
   onMove,
   onDelete,
   onConvertToProject,
@@ -44,7 +46,9 @@ export function SortableStandaloneActionItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`action-item ${isDragging ? 'dragging' : ''}`}
+      className={`action-item ${action.starred ? 'starred-action' : ''} ${
+        isDragging ? 'dragging' : ''
+      }`}
     >
       <button
         type="button"
@@ -61,6 +65,16 @@ export function SortableStandaloneActionItem({
         checked={action.completed}
         onChange={() => onToggle(action)}
       />
+
+      <button
+        type="button"
+        className={`star-button ${action.starred ? 'active' : ''}`}
+        title={action.starred ? '取消重点标记' : '标记为重点动作'}
+        aria-label={action.starred ? '取消重点标记' : '标记为重点动作'}
+        onClick={() => onToggleStar(action)}
+      >
+        {action.starred ? '★' : '☆'}
+      </button>
 
       <div className="action-main">
         {isEditing ? (
