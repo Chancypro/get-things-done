@@ -21,6 +21,7 @@ type Props = {
   onSaveEditProject: (projectId: string) => void
   onCancelEditProject: () => void
   onToggleProjectStatus: (project: Project, status: ProjectStatus) => void
+  onChangeProjectColor: (project: Project, color: string) => void
   onDeleteProject: (project: Project) => void
   onChangeNewProjectActionTitle: (projectId: string, value: string) => void
   onAddProjectAction: (projectId: string) => void
@@ -60,6 +61,7 @@ export function ProjectsPage({
   onSaveEditProject,
   onCancelEditProject,
   onToggleProjectStatus,
+  onChangeProjectColor,
   onDeleteProject,
   onChangeNewProjectActionTitle,
   onAddProjectAction,
@@ -97,6 +99,7 @@ export function ProjectsPage({
                 <SortableProjectActionItem
                   key={action.id}
                   action={action}
+                  projectColor={project.color}
                   projectColorIndex={project.colorIndex}
                   isEditing={editingProjectActionKey === editKey}
                   editingTitle={editingProjectActionTitle}
@@ -196,6 +199,7 @@ export function ProjectsPage({
                     onSaveEdit={() => onSaveEditProject(project.id)}
                     onCancelEdit={onCancelEditProject}
                     onToggleStatus={() => onToggleProjectStatus(project, 'trash')}
+                    onChangeColor={(color) => onChangeProjectColor(project, color)}
                     onDelete={() => onDeleteProject(project)}
                     onChangeNewActionTitle={(value) =>
                       onChangeNewProjectActionTitle(project.id, value)
@@ -227,6 +231,7 @@ type TrashProjectsSectionProps = {
   onSaveEditProject: (projectId: string) => void
   onCancelEditProject: () => void
   onToggleProjectStatus: (project: Project, status: ProjectStatus) => void
+  onChangeProjectColor: (project: Project, color: string) => void
   onDeleteProject: (project: Project) => void
   onToggleCompletedProjectActions: (projectId: string) => void
   onStartEditProjectAction: (projectId: string, action: ProjectAction) => void
@@ -256,6 +261,7 @@ export function TrashProjectsSection({
   onSaveEditProject,
   onCancelEditProject,
   onToggleProjectStatus,
+  onChangeProjectColor,
   onDeleteProject,
   onToggleCompletedProjectActions,
   onStartEditProjectAction,
@@ -320,6 +326,7 @@ export function TrashProjectsSection({
       <ProjectActionRow
         key={action.id}
         action={action}
+        projectColor={project.color}
         projectColorIndex={project.colorIndex}
         isEditing={editingProjectActionKey === editKey}
         editingTitle={editingProjectActionTitle}
@@ -364,6 +371,7 @@ export function TrashProjectsSection({
               onSaveEdit={() => onSaveEditProject(project.id)}
               onCancelEdit={onCancelEditProject}
               onToggleStatus={() => onToggleProjectStatus(project, 'active')}
+              onChangeColor={(color) => onChangeProjectColor(project, color)}
               onDelete={() => onDeleteProject(project)}
               onChangeNewActionTitle={() => {}}
               onAddAction={() => {}}

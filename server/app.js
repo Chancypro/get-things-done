@@ -8,7 +8,17 @@ const port = 3000
 
 const ACTION_MODULES = ['inbox', 'next', 'someday', 'waiting', 'reference', 'trash']
 const PROJECT_STATUSES = ['active', 'trash']
-const PROJECT_COLOR_COUNT = 8
+const DEFAULT_PROJECT_COLORS = [
+  '#3B82F6',
+  '#22C55E',
+  '#F97316',
+  '#8B5CF6',
+  '#14B8A6',
+  '#F43F5E',
+  '#EAB308',
+  '#64748B',
+]
+const PROJECT_COLOR_COUNT = DEFAULT_PROJECT_COLORS.length
 
 const defaultData = {
   standaloneActions: [],
@@ -42,6 +52,11 @@ function normalizeDb() {
     if (typeof project.order !== 'number') project.order = projectIndex
     if (typeof project.colorIndex !== 'number') {
       project.colorIndex = projectIndex % PROJECT_COLOR_COUNT
+    }
+    if (!isValidProjectColor(project.color)) {
+      project.color = getDefaultProjectColor(project.colorIndex)
+    } else {
+      project.color = normalizeProjectColor(project.color)
     }
     if (!Array.isArray(project.actions)) project.actions = []
 
@@ -82,6 +97,18 @@ function normalizeActionFields(action) {
   }
 }
 
+function isValidProjectColor(color) {
+  return typeof color === 'string' && /^#[0-9a-fA-F]{6}$/.test(color)
+}
+
+function normalizeProjectColor(color) {
+  return color.toUpperCase()
+}
+
+function getDefaultProjectColor(index) {
+  return DEFAULT_PROJECT_COLORS[((index % PROJECT_COLOR_COUNT) + PROJECT_COLOR_COUNT) % PROJECT_COLOR_COUNT]
+}
+
 function getModuleActions(moduleKey) {
   return db.data.standaloneActions
     .filter((item) => item.module === moduleKey)
@@ -111,6 +138,12 @@ function reindexProjectsByStatus(status) {
   const projects = getProjectsByStatus(status)
   projects.forEach((project, index) => {
     project.order = index
+  })
+}
+
+function makeRoomAtTopOfProjects(status) {
+  getProjectsByStatus(status).forEach((project) => {
+    project.order = (project.order ?? 0) + 1
   })
 }
 
@@ -330,13 +363,17 @@ app.post('/api/projects/from-action', async (req, res) => {
 
   db.data.standaloneActions.splice(actionIndex, 1)
   reindexModule('inbox')
+  makeRoomAtTopOfProjects('active')
+
+  const colorIndex = getNextProjectColorIndex()
 
   const newProject = {
     id: uuidv4(),
     title: sourceAction.title,
     status: 'active',
-    order: getProjectsByStatus('active').length,
-    colorIndex: getNextProjectColorIndex(),
+    order: 0,
+    colorIndex,
+    color: getDefaultProjectColor(colorIndex),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     actions: [],
@@ -387,7 +424,7 @@ app.post('/api/projects/reorder', async (req, res) => {
 
 app.patch('/api/projects/:id', async (req, res) => {
   const { id } = req.params
-  const { title, status } = req.body
+  const { title, status, color } = req.body
 
   const project = getProjectById(id)
 
@@ -403,14 +440,19 @@ app.patch('/api/projects/:id', async (req, res) => {
     project.title = nextTitle
   }
 
+  if (typeof color === 'string') {
+    if (!isValidProjectColor(color)) {
+      return res.status(400).json({ error: '项目颜色必须是 #RRGGBB 格式' })
+    }
+    project.color = normalizeProjectColor(color)
+  }
+
   if (typeof status === 'string' && PROJECT_STATUSES.includes(status) && status !== project.status) {
     const previousStatus = project.status
-    const targetOrder = db.data.projects.filter(
-      (item) => item.status === status && item.id !== project.id
-    ).length
+    makeRoomAtTopOfProjects(status)
 
     project.status = status
-    project.order = targetOrder
+    project.order = 0
 
     reindexProjectsByStatus(previousStatus)
     reindexProjectsByStatus(status)

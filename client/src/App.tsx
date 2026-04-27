@@ -146,6 +146,7 @@ function App() {
         .map((action) => ({
           projectId: project.id,
           projectTitle: project.title,
+          projectColor: project.color,
           projectColorIndex: project.colorIndex,
           action,
         }))
@@ -333,6 +334,16 @@ function App() {
     } catch (err) {
       console.error(err)
       alert('更新项目状态失败，请查看控制台报错。')
+    }
+  }
+
+  async function handleProjectColorChange(project: Project, color: string) {
+    try {
+      await api.updateProject(project.id, { color })
+      await refreshData(false)
+    } catch (err) {
+      console.error(err)
+      alert('更新项目颜色失败，请查看控制台报错。')
     }
   }
 
@@ -699,6 +710,7 @@ function App() {
                     onSaveEditProject={saveEditProject}
                     onCancelEditProject={cancelEditProject}
                     onToggleProjectStatus={handleProjectStatusChange}
+                    onChangeProjectColor={handleProjectColorChange}
                     onDeleteProject={handleDeleteProject}
                     onToggleCompletedProjectActions={toggleProjectCompleted}
                     onStartEditProjectAction={startEditProjectAction}
@@ -763,6 +775,7 @@ function App() {
               onSaveEditProject={saveEditProject}
               onCancelEditProject={cancelEditProject}
               onToggleProjectStatus={handleProjectStatusChange}
+              onChangeProjectColor={handleProjectColorChange}
               onDeleteProject={handleDeleteProject}
               onChangeNewProjectActionTitle={updateNewProjectActionTitle}
               onAddProjectAction={handleAddProjectAction}

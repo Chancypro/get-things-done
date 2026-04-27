@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { getProjectColorStyle } from '../lib/projectColors'
 import type { ProjectAction, SyncTarget } from '../types'
 
 type Props = {
@@ -7,6 +8,7 @@ type Props = {
   isEditing: boolean
   editingTitle: string
   sourceProjectTitle?: string
+  projectColor?: string
   projectColorIndex: number
   showSyncControls: boolean
   showDelete: boolean
@@ -26,6 +28,7 @@ export function ProjectActionRow({
   isEditing,
   editingTitle,
   sourceProjectTitle,
+  projectColor,
   projectColorIndex,
   showSyncControls,
   showDelete,
@@ -43,6 +46,7 @@ export function ProjectActionRow({
       className={`project-action-row project-color-${projectColorIndex % 8} ${
         action.starred ? 'starred-action' : ''
       }`}
+      style={getProjectColorStyle({ color: projectColor, colorIndex: projectColorIndex })}
     >
       <div className="project-action-top">
         <div className="project-action-left">

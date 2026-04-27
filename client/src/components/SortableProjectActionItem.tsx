@@ -5,6 +5,7 @@ import { ProjectActionRow } from './ProjectActionRow'
 
 type Props = {
   action: ProjectAction
+  projectColor: string
   projectColorIndex: number
   isEditing: boolean
   editingTitle: string
@@ -31,6 +32,7 @@ export function SortableProjectActionItem(props: Props) {
     <div ref={setNodeRef} style={style} className={isDragging ? 'dragging-wrapper' : ''}>
       <ProjectActionRow
         action={props.action}
+        projectColor={props.projectColor}
         projectColorIndex={props.projectColorIndex}
         isEditing={props.isEditing}
         editingTitle={props.editingTitle}

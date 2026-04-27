@@ -51,6 +51,7 @@ export type Project = {
   status: ProjectStatus
   order: number
   colorIndex: number
+  color: string
   createdAt: string
   updatedAt: string
   actions: ProjectAction[]

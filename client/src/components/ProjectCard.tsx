@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { getProjectColor, getProjectColorStyle } from '../lib/projectColors'
 import type { Project } from '../types'
 
 type ProjectCardContentProps = {
@@ -17,6 +18,7 @@ type ProjectCardContentProps = {
   onCancelEdit: () => void
   onToggleStatus: () => void
   onDelete: () => void
+  onChangeColor: (color: string) => void
   onChangeNewActionTitle: (value: string) => void
   onAddAction: () => void
   children: ReactNode
@@ -36,15 +38,27 @@ export function ProjectCardContent({
   onCancelEdit,
   onToggleStatus,
   onDelete,
+  onChangeColor,
   onChangeNewActionTitle,
   onAddAction,
   children,
 }: ProjectCardContentProps) {
   return (
-    <div className={`project-card project-color-${project.colorIndex % 8}`}>
+    <div
+      className={`project-card project-color-${project.colorIndex % 8}`}
+      style={getProjectColorStyle(project)}
+    >
       <div className="project-header">
         <div className="project-title-row">
           {dragHandle}
+          <input
+            className="project-color-input"
+            type="color"
+            value={getProjectColor(project)}
+            title="调整项目颜色"
+            aria-label={`调整项目「${project.title}」颜色`}
+            onChange={(event) => onChangeColor(event.target.value)}
+          />
           <div className="project-title-block">
             {isEditing ? (
               <input

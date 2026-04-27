@@ -12,6 +12,7 @@ import type {
 type SyncedProjectAction = {
   projectId: string
   projectTitle: string
+  projectColor: string
   projectColorIndex: number
   action: ProjectAction
 }
@@ -147,7 +148,7 @@ export function StandaloneModulePage({
 
     return (
       <div className="project-action-list">
-        {groupActions.map(({ projectId, projectTitle, projectColorIndex, action }) => {
+        {groupActions.map(({ projectId, projectTitle, projectColor, projectColorIndex, action }) => {
           const editKey = getProjectActionEditKey(projectId, action.id)
 
           return (
@@ -155,6 +156,7 @@ export function StandaloneModulePage({
               key={editKey}
               action={action}
               sourceProjectTitle={projectTitle}
+              projectColor={projectColor}
               projectColorIndex={projectColorIndex}
               isEditing={editingProjectActionKey === editKey}
               editingTitle={editingProjectActionTitle}
